@@ -6,26 +6,11 @@ const baseConfig = {
   showHiddenFiles: true,
 };
 
-// 🔎 DEBUG-preview-handler — tjekker kun om /preview-route bliver ramt
-async function handlePreview(request: Request, env: any): Promise<Response> {
-  const url = new URL(request.url);
-  const key = url.searchParams.get("key");
-
-  const body = JSON.stringify(
-    {
-      message: "Preview route IS HIT 🎯",
-      pathname: url.pathname,
-      key,
-    },
-    null,
-    2
-  );
-
-  return new Response(body, {
+// midlertidig super-simpel preview handler
+async function handlePreview(_request: Request): Promise<Response> {
+  return new Response("HELLO FROM /preview (dev index.ts)", {
     status: 200,
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "text/plain" },
   });
 }
 
@@ -37,12 +22,12 @@ export default {
   async fetch(request: Request, env: any, context: any): Promise<Response> {
     const url = new URL(request.url);
 
-    // ⬇️ NYT: fang /preview før vi sender noget videre til dashboardet
+    // ⬇️ FANG /preview FØRST
     if (url.pathname === "/preview") {
-      return handlePreview(request, env);
+      return handlePreview(request);
     }
 
-    // Standard R2-Explorer UI
+    // Resten af trafikken går til det normale R2-Explorer UI
     return R2Explorer({
       ...baseConfig,
       basicAuth: {
