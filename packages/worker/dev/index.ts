@@ -6,68 +6,61 @@ const baseConfig = {
   showHiddenFiles: true,
 };
 
-// 👇 NY FUNKTION: håndterer /preview requests
-async function handlePreview(request, env) {
+// Simpel preview-handler til video (mp4) m.m.
+async function handlePreview(request: Request, env: any): Promise<Response> {
   const url = new URL(request.url);
-
-  // vi forventer ?key=<stien til filen i buckettet>
   const key = url.searchParams.get("key");
+
   if (!key) {
     return new Response("Missing 'key' query parameter", { status: 400 });
   }
 
-  try {
-    // ⚠️ VIGTIGT: vi antager, at din R2-binding hedder "coho"
-    // Det er meget sandsynligt pga. R2EXPLORER_BUCKETS = coho:coho-deliveries-dev
-    const bucket = env.coho;
-    if (!bucket) {
-      return new Response("R2 binding 'coho' not found on env", { status: 500 });
-    }
-
-    const object = await bucket.get(key);
-
-    if (!object || !object.body) {
-      return new Response("File not found", { status: 404 });
-    }
-
-    // Brug metadata hvis de findes, ellers fallback til video/mp4
-    const contentType =
-      (object.httpMetadata && object.httpMetadata.contentType) ||
-      "video/mp4";
-
-    const headers = new Headers();
-    headers.set("Content-Type", contentType);
-    headers.set("Accept-Ranges", "bytes");
-
-    // Simpel version uden Range-håndtering (progressiv download/stream)
-    return new Response(object.body, {
-      status: 200,
-      headers,
-    });
-  } catch (err) {
-    console.error("Error in /preview:", err);
-    return new Response("Internal error in preview", { status: 500 });
+  // R2-binding – navnet SKAL matche wrangler.toml (binding = "coho")
+  const bucket = (env as any).coho;
+  if (!bucket) {
+    return new Response("R2 bucket binding 'coho' not found", { status: 500 });
   }
+
+  const object = await bucket.get(key);
+
+  if (!object || !object.body) {
+    return new Response("Object not found", { status: 404 });
+  }
+
+  // Sæt fornuftige headers til video
+  const headers = new Headers();
+  headers.set(
+    "Content-Type",
+    object.httpMetadata?.contentType || "video/mp4"
+  );
+  headers.set("Content-Length", object.size?.toString() ?? "");
+  headers.set("Accept-Ranges", "bytes");
+
+  return new Response(object.body, {
+    status: 200,
+    headers,
+  });
 }
 
 export default {
-  async email(event, env, context) {
+  async email(event: any, env: any, context: any) {
     await R2Explorer(baseConfig).email(event, env, context);
   },
-  async fetch(request, env, context) {
+
+  async fetch(request: Request, env: any, context: any): Promise<Response> {
     const url = new URL(request.url);
 
-    // 👇 NYT: hvis path er /preview, så bruger vi vores egen handler
+    // ⬇️ NYT: fang /preview før vi sender noget videre til dashboardet
     if (url.pathname === "/preview") {
       return handlePreview(request, env);
     }
 
-    // 👇 alt andet går videre til R2Explorer som før
+    // Standard R2-Explorer UI
     return R2Explorer({
       ...baseConfig,
       basicAuth: {
-        username: env.BASIC_USERNAME,
-        password: env.BASIC_PASSWORD,
+        username: (env as any).BASIC_USERNAME,
+        password: (env as any).BASIC_PASSWORD,
       },
     }).fetch(request, env, context);
   },
