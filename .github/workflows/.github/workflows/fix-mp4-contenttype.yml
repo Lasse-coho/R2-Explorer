@@ -1,0 +1,30 @@
+name: Fix MP4 Content-Type (Members content)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  fix-mp4:
+    runs-on: ubuntu-latest
+
+    env:
+      R2_BUCKET: coho-deliveries-dev
+      R2_PREFIX: "Members content/"
+      R2_ENDPOINT: "https://e643a1f73d95c14fd760a91187e29637.r2.cloudflarestorage.com"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+
+      - name: Install AWS SDK
+        run: npm install @aws-sdk/client-s3
+
+      - name: Fix MP4 Content-Type
+        run: node scripts/fix-mp4-content-type.mjs
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
