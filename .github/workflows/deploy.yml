@@ -9,14 +9,27 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy
+    name: Deploy R2-Explorer
+
     steps:
+      # 1. Checkout repo
       - uses: actions/checkout@v5
+
+      # 2. Setup Node 20
       - name: Setup node
         uses: actions/setup-node@v6
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
+
+      # 3. Install dependencies (før prepareDeploy.js!)
+      - name: Install dependencies
+        working-directory: packages/github-action
+        run: |
+          npm install
+          npm install --save r2-explorer@latest
+
+      # 4. Kør R2-Explorer build-script
       - name: Setup R2-Explorer
         env:
           R2EXPLORER_WORKER_NAME: ${{ vars.R2EXPLORER_WORKER_NAME }}
@@ -25,8 +38,8 @@ jobs:
           R2EXPLORER_DOMAIN: ${{ vars.R2EXPLORER_DOMAIN }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: node packages/github-action/prepareDeploy.js
-      - name: Get latest version
-        run: cd packages/github-action && npm install && npm install --save r2-explorer@latest
+
+      # 5. Deploy til Cloudflare Workers
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
