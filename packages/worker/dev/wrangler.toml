@@ -1,11 +1,18 @@
-name = "my-r2-explorer"
+name = "coho-r2-explorer-dev"
 compatibility_date = "2024-11-06"
 main = "index.ts"
 workers_dev = true
-assets = { directory = "../../dashboard/dist/spa", binding = "ASSETS", html_handling = "auto-trailing-slash", not_found_handling = "single-page-application" }
 
+# Dashboard assets (lader vi være som før)
+assets = { 
+  directory = "../../dashboard/dist/spa", 
+  binding = "ASSETS", 
+  html_handling = "auto-trailing-slash", 
+  not_found_handling = "single-page-application" 
+}
+
+# 📦 R2-binding til dit rigtige bucket
 [[r2_buckets]]
-binding = 'teste'
-bucket_name = 'teste'
-preview_bucket_name = 'teste'
-
+binding = "coho"                       # det navn vi bruger i index.ts (env.coho)
+bucket_name = "coho-deliveries-dev"    # præcis som bucket’et hedder i R2
+preview_bucket_name = "coho-deliveries-dev"
