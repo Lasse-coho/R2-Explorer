@@ -3,11 +3,9 @@ compatibility_date = "2024-11-06"
 main = "index.ts"
 workers_dev = true
 
-# Dashboard assets (skal stå på ÉN linje)
-assets = { directory = "../../dashboard/dist/spa", binding = "ASSETS", html_handling = "auto-trailing-slash", not_found_handling = "single-page-application" }
+# (FJERNET assets = { ... })
 
-# 📦 R2-binding til dit rigtige bucket
 [[r2_buckets]]
-binding = "coho"                       # det navn vi bruger i index.ts (env.coho)
-bucket_name = "coho-deliveries-dev"    # præcis som bucket’et hedder i R2
+binding = "coho"
+bucket_name = "coho-deliveries-dev"
 preview_bucket_name = "coho-deliveries-dev"
