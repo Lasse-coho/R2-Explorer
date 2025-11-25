@@ -1,6 +1,15 @@
 // packages/worker/dev/index.ts
 
-// ⚠️ Simpel worker KUN til /preview – ingen UI her.
+// 🔧 Lille helper til at hente R2 bucket'en
+function getBucket(env: any) {
+  const bucket = (env as any).coho; // binding = "coho" i dev/wrangler.toml
+  if (!bucket) {
+    throw new Error("R2 bucket binding 'coho' not found on env");
+  }
+  return bucket;
+}
+
+// 🎥 Preview handler (samme som før, bare med lidt bedre fejlbeskeder)
 async function handlePreview(request: Request, env: any): Promise<Response> {
   const url = new URL(request.url);
   const key = url.searchParams.get("key");
@@ -9,38 +18,22 @@ async function handlePreview(request: Request, env: any): Promise<Response> {
     return new Response("Missing 'key' query parameter", { status: 400 });
   }
 
-  // R2-binding – skal matche binding-navnet i dev/wrangler.toml
-  // [[r2_buckets]]
-  // binding = "coho"
-  // bucket_name = "coho-deliveries-dev"
-  const bucket = (env as any).coho;
-  if (!bucket) {
-    return new Response("R2 bucket binding 'coho' not found on env", {
-      status: 500,
-    });
-  }
+  const bucket = getBucket(env);
 
   const object = await bucket.get(key);
 
   if (!object || !object.body) {
-    return new Response("Object not found", { status: 404 });
+    return new Response(`Object not found for key: ${key}`, { status: 404 });
   }
 
-  // Basic headers til video-streaming
   const headers = new Headers();
-
-  // Content-Type: brug metadata hvis den findes, ellers antag mp4
   headers.set(
     "Content-Type",
     object.httpMetadata?.contentType || "video/mp4"
   );
-
-  // Størrelse (hjælper browseren lidt)
   if (typeof object.size === "number") {
     headers.set("Content-Length", object.size.toString());
   }
-
-  // Tillad evt. senere Range-requests
   headers.set("Accept-Ranges", "bytes");
 
   return new Response(object.body, {
@@ -49,16 +42,56 @@ async function handlePreview(request: Request, env: any): Promise<Response> {
   });
 }
 
+// 🧪 DEBUG 1: List de første ~50 keys i bucketten
+async function handleDebugList(env: any): Promise<Response> {
+  const bucket = getBucket(env);
+  const list = await bucket.list({ limit: 50 });
+
+  const keys = list.objects.map((o: any) => o.key);
+
+  return new Response(JSON.stringify({ count: keys.length, keys }, null, 2), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// 🧪 DEBUG 2: List keys med bestemt prefix
+async function handleDebugPrefix(request: Request, env: any): Promise<Response> {
+  const url = new URL(request.url);
+  const prefix = url.searchParams.get("prefix") || "";
+
+  const bucket = getBucket(env);
+  const list = await bucket.list({ prefix, limit: 50 });
+
+  const keys = list.objects.map((o: any) => o.key);
+
+  return new Response(
+    JSON.stringify({ prefix, count: keys.length, keys }, null, 2),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+}
+
 export default {
   async fetch(request: Request, env: any): Promise<Response> {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    // 🎯 Vores eneste feature på denne worker:
-    if (url.pathname === "/preview") {
+    // 🎯 Vores tre endpoints på dev-worker'en:
+    if (path === "/preview") {
       return handlePreview(request, env);
     }
 
-    // Alt andet = almindelig 404
-    return new Response("Not found", { status: 404 });
+    if (path === "/debug-r2") {
+      return handleDebugList(env);
+    }
+
+    if (path === "/debug-prefix") {
+      return handleDebugPrefix(request, env);
+    }
+
+    return new Response("Not found (dev worker)", { status: 404 });
   },
 };
