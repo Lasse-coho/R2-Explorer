@@ -3,13 +3,8 @@ compatibility_date = "2024-11-06"
 main = "index.ts"
 workers_dev = true
 
-# Dashboard assets (lader vi være som før)
-assets = { 
-  directory = "../../dashboard/dist/spa", 
-  binding = "ASSETS", 
-  html_handling = "auto-trailing-slash", 
-  not_found_handling = "single-page-application" 
-}
+# Dashboard assets (skal stå på ÉN linje)
+assets = { directory = "../../dashboard/dist/spa", binding = "ASSETS", html_handling = "auto-trailing-slash", not_found_handling = "single-page-application" }
 
 # 📦 R2-binding til dit rigtige bucket
 [[r2_buckets]]
