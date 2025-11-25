@@ -6,39 +6,26 @@ const baseConfig = {
   showHiddenFiles: true,
 };
 
-// Simpel preview-handler til video (mp4) m.m.
+// 🔎 DEBUG-preview-handler — tjekker kun om /preview-route bliver ramt
 async function handlePreview(request: Request, env: any): Promise<Response> {
   const url = new URL(request.url);
   const key = url.searchParams.get("key");
 
-  if (!key) {
-    return new Response("Missing 'key' query parameter", { status: 400 });
-  }
-
-  // R2-binding – navnet SKAL matche wrangler.toml (binding = "coho")
-  const bucket = (env as any).coho;
-  if (!bucket) {
-    return new Response("R2 bucket binding 'coho' not found", { status: 500 });
-  }
-
-  const object = await bucket.get(key);
-
-  if (!object || !object.body) {
-    return new Response("Object not found", { status: 404 });
-  }
-
-  // Sæt fornuftige headers til video
-  const headers = new Headers();
-  headers.set(
-    "Content-Type",
-    object.httpMetadata?.contentType || "video/mp4"
+  const body = JSON.stringify(
+    {
+      message: "Preview route IS HIT 🎯",
+      pathname: url.pathname,
+      key,
+    },
+    null,
+    2
   );
-  headers.set("Content-Length", object.size?.toString() ?? "");
-  headers.set("Accept-Ranges", "bytes");
 
-  return new Response(object.body, {
+  return new Response(body, {
     status: 200,
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+    },
   });
 }
 
